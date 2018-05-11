@@ -1,0 +1,11 @@
+<?php
+
+/**
+ * Implements hook_uninstall().
+ */
+function dynamic_path_uninstall() {
+  variable_del('dynamic_path_url');
+  variable_del('content_type_list');
+  variable_del('content_list');
+  menu_rebuild();
+}

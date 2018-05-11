@@ -1,0 +1,4 @@
+name = Dynamic path configuration 
+description = Configuration settings.
+core = 7.x
+configure = admin/config/content/dynamic_path

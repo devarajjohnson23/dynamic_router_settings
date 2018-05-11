@@ -1,0 +1,150 @@
+<?php
+
+
+/**
+ * Implements hook_menu().
+ */
+function dynamic_path_menu() {
+  $items = array();
+  $path = variable_get('dynamic_path_url');
+  $items[$path] = array(
+    'title' => 'Custom page',
+    'page callback' => 'dynamic_link_page_callback',
+    'access arguments' => array('access content'),
+  );
+  $items['admin/config/content/dynamic_path'] = array(
+    'title' => 'Dynamic path',
+    'description' => 'Configuration for dynamic path',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('dynamic_path_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+
+/**
+ * Page callback: Current posts settings
+ *
+ * @see current_posts_menu()
+ */
+function dynamic_path_form($form, &$form_state) {
+
+  $form['dynamic_path_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Path'),
+    '#default_value' => variable_get('dynamic_path_url'),
+    '#size' => 128,
+    '#description' => t('Path to display content'),
+    '#required' => TRUE,
+  );
+
+    $form['content_type_list'] = array(
+    '#title' => t("Select the content type"),
+    '#type' => 'select',
+    '#options' => node_type_get_names(),
+    '#default_value' => variable_get('content_type_list'),
+    '#ajax' => array(
+      // #ajax has two required keys: callback and wrapper.
+      // 'callback' is a function that will be called when this element changes.
+      'callback' => 'dynamic_path_ajax_replace',
+      // 'wrapper' is the HTML id of the page element that will be replaced.
+      'wrapper' => 'content_list_div',
+      // There are also several optional keys - see ajax_example_autocheckboxes
+      // below for details on 'method', 'effect' and 'speed' and
+      // ajax_example_dependent_dropdown for 'event'.
+    ),
+  );
+
+  // This entire form element will be replaced whenever 'changethis' is updated.
+  $form['content_list'] = array(
+    '#type' => 'select',
+    '#title' => t("Content List of above content type"),
+    '#options' => variable_get('content_list',array('none')),
+    // The prefix/suffix provide the div that we're replacing, named by
+    // #ajax['wrapper'] above.
+    '#default_value' => variable_get('content_list',array()),
+    '#multiple' => true,
+    '#prefix' => '<div id="content_list_div">',
+    '#suffix' => '</div>',
+  );
+
+  // An AJAX request calls the form builder function for every change.
+  // We can change how we build the form based on $form_state.
+  if (!empty($form_state['values']['content_type_list'])) {
+  	$options = array_filter(get_node_title_and_nid_by_type($form_state['values']['content_type_list'],TRUE));
+    $form['content_list']['#options'] = $options;
+    variable_set('content_list',get_node_title_and_nid_by_type($form_state['values']['content_type_list']));
+  }
+  //  return system_settings_form($form);
+  //  //$form['#submit'][] = array('dynamic_path_form_submit');
+  //  //return $form;
+   $form = system_settings_form($form);
+$form['#submit'][] = 'dynamic_path_form_submit';
+return $form;
+}
+
+
+/**
+ * Implements validation from the Form API.
+ * 
+ * @param $form
+ *   A structured array containing the elements and properties of the form.
+ * @param $form_state
+ *   An array that stores information about the form's current state 
+ *   during processing.
+ */
+function dynamic_path_form_validate($form, &$form_state){
+
+}
+/**
+ * Submit handler
+ */
+function dynamic_path_form_submit($form, &$form_state){
+  variable_set('menu_rebuild_needed', TRUE);
+  drupal_goto(variable_get('dynamic_path_url'));
+}
+
+
+function dynamic_path_ajax_replace($form, $form_state) {
+  // The form has already been submitted and updated. We can return the replaced
+  // item as it is.
+  return $form['content_list'];
+}
+
+function get_node_title_and_nid_by_type($type,$nid=FALSE){
+	$query = new EntityFieldQuery();
+
+	$query->entityCondition('entity_type', 'node')
+	  ->entityCondition('bundle', $type)
+	  ->propertyCondition('status', 1);
+
+	$result = $query->execute();
+
+	if (!empty($result['node'])) {
+	  $nids = array_keys($result['node']);
+	  $nodes = node_load_multiple($nids);
+
+	  foreach ($nodes as $node) {
+      if($nid){
+        $node_list[$node->title] = $node->title; 
+      }else{
+        $node_list[$node->nid] = $node->title; 
+      }
+	  }
+	}
+
+	return $node_list;
+}
+
+
+/**
+* Custom pagecallback function.
+*/
+function dynamic_link_page_callback() {
+$nodes = node_load_multiple(NULL, array("title" => variable_get('content_list')));
+$rendered_nodes = node_view_multiple($nodes, 'default');
+return render($rendered_nodes);
+} 
