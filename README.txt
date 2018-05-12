@@ -37,3 +37,13 @@ Refer to the "Developing for Drupal" section of the README.txt in the Drupal
 root directory for further information on extending Drupal with custom modules.
 
 Configure the Dynamic link module
+
+1. create a admin form with three fields 
+a. path 
+b. dropdown listing all the content type
+c. conditional dropdown listing all the content of the contnet type selected in the previous content type, with two or more content. 
+d. submit button 
+
+2. on form submit validate and redirect to the path entered in the fiest field. 
+
+make the page at the path display all the selected content from the dropdown in the step c above
